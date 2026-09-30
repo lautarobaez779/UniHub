@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Horarios y Cursadas - UniHub{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full animate-fade-in">
+
+    <!-- Header & Action Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">
+                <span>Cronograma Semanal</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Horarios & Cursadas</h1>
+            <p class="text-sm text-slate-400 mt-1">Organización de bloques horarios de Lunes a Sábado, aulas físicas y enlaces virtuales.</p>
+        </div>
+        <div>
+            <button onclick="abrirModalCrearHorario()" class="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/30 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Nuevo Bloque Horario</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Grilla Semanal Visual (Lunes a Sábado) -->
+    <div class="glass-panel rounded-2xl p-6 overflow-x-auto">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="calendar" class="w-5 h-5 text-indigo-400"></i>
+                <span>Grilla Semanal de Clases</span>
+            </h3>
+            <span class="text-xs text-slate-400">Lunes a Sábado</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 min-w-[700px] md:min-w-0">
+            {% for dia in ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"] %}
+            {% set clases_del_dia = [] %}
+            {% for h in horarios %}
+                {% if h.dia_semana.value == dia %}
+                    {% set _ = clases_del_dia.append(h) %}
+                {% endif %}
+            {% endfor %}
+
+            <div class="flex flex-col rounded-xl bg-slate-900/60 border border-slate-800/80 p-3 min-h-[300px]">
+                <div class="pb-2 mb-3 border-b border-slate-800 flex items-center justify-between">
+                    <span class="font-bold text-xs uppercase tracking-wider text-slate-300">{{ dia }}</span>
+                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                        {{ clases_del_dia | length }}
+                    </span>
+                </div>
+
+                <div class="space-y-2.5 flex-1">
+                    {% if clases_del_dia %}
+                        {% for c in clases_del_dia %}
+                        <div class="p-3 rounded-xl bg-slate-800/90 border-l-4 shadow-sm hover:scale-[1.02] transition-transform relative group"
+                             style="border-left-color: {{ c.materia.color_hex if c.materia else '#3b82f6' }};">
+                            
+                            <div class="flex items-start justify-between gap-1">
+                                <h4 class="font-bold text-white text-xs leading-tight truncate">
+                                    {{ c.materia.nombre if c.materia else 'Materia' }}
+                                </h4>
+                                <button onclick="eliminarHorario({{ c.id }})" class="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-rose-400 p-0.5" title="Eliminar horario">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+
+                            <div class="mt-2 flex items-center gap-1 text-[11px] text-slate-300 font-mono">
+                                <i data-lucide="clock" class="w-3 h-3 text-slate-400"></i>
+                                <span>{{ c.hora_inicio.strftime('%H:%M') }} - {{ c.hora_fin.strftime('%H:%M') }}</span>
+                            </div>
+
+                            {% if c.aula %}
+                            <div class="mt-1 flex items-center gap-1 text-[11px] text-slate-400 truncate">
+                                <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400 flex-shrink-0"></i>
+                                <span class="truncate">{{ c.aula }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="h-full flex items-center justify-center text-slate-600 text-[11px] italic">
+                            Sin cursadas
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Lista Detallada de Horarios -->
+    <div class="glass-panel rounded-2xl p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-emerald-400"></i>
+                <span>Listado de Bloques Horarios</span>
+            </h3>
+            <span class="text-xs text-slate-400">Total: {{ horarios | length }} bloques</span>
+        </div>
+
+        <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 rounded-l-xl">Materia</th>
+                        <th class="px-4 py-3">Día</th>
+                        <th class="px-4 py-3">Horario</th>
+                        <th class="px-4 py-3">Ubicación / Aula / Virtual</th>
+                        <th class="px-4 py-3 text-right rounded-r-xl">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    {% if horarios %}
+                        {% for h in horarios %}
+                        <tr class="hover:bg-slate-900/50 transition-colors">
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ h.materia.color_hex if h.materia else '#3b82f6' }};"></span>
+                                    <span class="font-bold text-white">{{ h.materia.nombre if h.materia else 'Materia' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3.5 font-semibold text-slate-200">
+                                {{ h.dia_semana.value }}
+                            </td>
+                            <td class="px-4 py-3.5 font-mono text-xs text-slate-300">
+                                {{ h.hora_inicio.strftime('%H:%M') }} - {{ h.hora_fin.strftime('%H:%M') }}
+                            </td>
+                            <td class="px-4 py-3.5 text-xs text-slate-400">
+                                {% if h.aula %}
+                                    <span class="flex items-center gap-1.5">
+                                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                        <span>{{ h.aula }}</span>
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-600 italic">No especificada</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3.5 text-right">
+                                <button onclick="eliminarHorario({{ h.id }})" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors" title="Eliminar">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                                No hay horarios configurados. Presioná "Nuevo Bloque Horario" para crear uno.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

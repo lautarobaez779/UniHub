@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Académico - UniHub{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full animate-fade-in">
+
+    <!-- Top Header & Greetings -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">
+                <span>Panel de Control Universitario</span>
+                <span>•</span>
+                <span>{{ ahora.strftime('%d/%m/%Y') }}</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Rendimiento Académico</h1>
+            <p class="text-sm text-slate-400 mt-1">Supervisá tus cursadas, fechas de parciales y promedio ponderado en tiempo real.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <button onclick="abrirModalCrearEvaluacion()" class="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-sm font-semibold border border-slate-700 transition-all shadow-sm">
+                <i data-lucide="calendar-plus" class="w-4 h-4 text-amber-400"></i>
+                <span>Agendar Examen</span>
+            </button>
+            <button onclick="abrirModalCrearMateria()" class="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Nueva Materia</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Banners for Urgent Deadlines -->
+    {% set urgentes = stats.proximos_examenes | selectattr("urgencia", "equalto", "URGENTE") | list %}
+    {% if urgentes %}
+    <div class="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 shadow-xl glow-urgent flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-rose-200 text-sm md:text-base">¡Atención! Fechas límite críticas en menos de 72hs</h4>
+                <p class="text-xs text-rose-300/80 mt-0.5">
+                    Tenés {{ urgentes | length }} evaluación(es) urgente(s):
+                    {% for u in urgentes %}
+                        <strong class="text-rose-100 font-semibold">{{ u.titulo }} ({{ u.materia_nombre }})</strong>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+        <a href="/evaluaciones" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0">
+            <span>Ver Cronograma</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- 4 Key Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        
+        <!-- Materias Activas -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Cursando Actualmente</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-black text-white">{{ stats.materias_cursando }}</span>
+                <span class="text-xs text-slate-400">de {{ stats.total_materias }} materias totales</span>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                <span>{{ stats.materias_aprobadas }} aprobadas | {{ stats.materias_regulares }} regulares</span>
+            </div>
+        </div>
+
+        <!-- Promedio Ponderado -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Promedio Ponderado</span>
+                <div class="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="award" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-black {% if stats.promedio_ponderado >= 7 %}text-emerald-400{% elif stats.promedio_ponderado >= 4 %}text-indigo-400{% else %}text-amber-400{% endif %}">
+                    {{ stats.promedio_ponderado }}
+                </span>
+                <span class="text-xs text-slate-400">/ 10 pts</span>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                <span>Promedio Simple: <strong class="text-slate-200">{{ stats.promedio_general }}</strong></span>
+            </div>
+        </div>
+
+        <!-- Próximos Exámenes -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Próximos Exámenes</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-black text-amber-400">{{ stats.proximos_examenes | length }}</span>
+                <span class="text-xs text-slate-400">evaluaciones futuras</span>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>{{ stats.evaluaciones_pendientes }} pendientes de calificar</span>
+            </div>
+        </div>
+
+        <!-- Tasa de Aprobación -->
+        <div class="glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tasa de Aprobación</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-black text-emerald-400">{{ stats.tasa_aprobacion }}%</span>
+                <span class="text-xs text-slate-400">de efectividad</span>
+            </div>
+            <div class="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>{{ stats.evaluaciones_aprobadas }} de {{ stats.evaluaciones_rendidas }} exámenes aprobados</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 2 Column Section: Clases de Hoy & Timeline de Exámenes -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Columna 1 y 2: Próximos Exámenes & Fechas Clave -->
+        <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="clock-3" class="w-5 h-5 text-indigo-400"></i>
+                    <h3 class="font-bold text-base text-white">Cronograma Inmediato & Entregas</h3>
+                </div>
+                <a href="/evaluaciones" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+                    <span>Ver Todo</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                {% if stats.proximos_examenes %}
+                    {% for exam in stats.proximos_examenes %}
+                    <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 hover:border-slate-700 flex items-center justify-between gap-4 transition-all">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="w-3 h-10 rounded-full flex-shrink-0" style="background-color: {{ exam.materia_color }};"></span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
+                                        {{ exam.tipo }}
+                                    </span>
+                                    {% if exam.peso_porcentaje %}
+                                    <span class="text-xs text-slate-400 font-mono">({{ exam.peso_porcentaje }}%)</span>
+                                    {% endif %}
+                                </div>
+                                <h4 class="font-bold text-white text-sm truncate mt-1">{{ exam.titulo }}</h4>
+                                <p class="text-xs text-slate-400 truncate">{{ exam.materia_nombre }}</p>
+                            </div>
+                        </div>
+
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-xs font-semibold text-slate-300">
+                                {{ exam.fecha.strftime('%d %b, %H:%M') }} hs
+                            </div>
+                            <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold 
+                                {% if exam.urgencia == 'URGENTE' %}bg-rose-500/20 text-rose-400 border border-rose-500/40
+                                {% elif exam.urgencia == 'PROXIMO' %}bg-amber-500/20 text-amber-400 border border-amber-500/40
+                                {% else %}bg-slate-800 text-slate-400{% endif %}">
+                                {% if exam.dias_restantes == 0 %}¡Hoy!
+                                {% elif exam.dias_restantes == 1 %}Mañana
+                                {% else %}en {{ exam.dias_restantes }} días{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-10">
+                        <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-500/40 mx-auto mb-2"></i>
+                        <p class="text-sm text-slate-300 font-medium">No tenés exámenes ni entregas pendientes</p>
+                        <p class="text-xs text-slate-500 mt-1">Podés agendar nuevas evaluaciones con el botón superior.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Columna 3: Clases del Día de Hoy -->
+        <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="calendar-check" class="w-5 h-5 text-emerald-400"></i>
+                        <h3 class="font-bold text-base text-white">Clases de Hoy</h3>
+                    </div>
+                    <a href="/horarios" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">Grilla Completa</a>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                    {% if stats.clases_hoy %}
+                        {% for clase in stats.clases_hoy %}
+                        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-3">
+                            <span class="w-2.5 h-full rounded-full self-stretch flex-shrink-0" style="background-color: {{ clase.materia_color }};"></span>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-white text-sm truncate">{{ clase.materia_nombre }}</h4>
+                                <div class="flex items-center gap-2 text-xs text-slate-400 mt-1 font-mono">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i>
+                                    <span>{{ clase.hora_inicio.strftime('%H:%M') }} - {{ clase.hora_fin.strftime('%H:%M') }}</span>
+                                </div>
+                                {% if clase.aula %}
+                                <div class="flex items-center gap-1.5 text-xs text-slate-400 mt-1 truncate">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0"></i>
+                                    <span class="truncate">{{ clase.aula }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i data-lucide="coffee" class="w-9 h-9 text-slate-600 mx-auto mb-2"></i>
+                            <p class="text-sm text-slate-300 font-medium">¡Día libre de cursadas!</p>
+                            <p class="text-xs text-slate-500 mt-1">Aprovechá para repasar apuntes o adelantar lecturas.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acceso rápido a calculadora -->
+            <div class="mt-6 pt-4 border-t border-slate-800/80">
+                <a href="/calculadora" class="flex items-center justify-between p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 transition-all text-xs text-indigo-200">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="calculator" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Simular notas y metas académicas</span>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

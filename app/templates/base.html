@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}UniHub - Gestión Académica Universitaria{% endblock %}</title>
+
+    <!-- PWA & iOS Mobile App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="UniHub">
+    <meta name="theme-color" content="#0d1322">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1322">
+    <meta name="description" content="Plataforma de gestión académica, materias y exámenes">
+
+    <!-- Icons & Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+
+    <!-- Tailwind CSS CDN con configuración modo oscuro -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        darkbg: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-[#080c14] text-slate-100 min-h-screen flex flex-col md:flex-row antialiased selection:bg-indigo-600 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-auto"></div>
+
+    <!-- Mobile iOS Header -->
+    <header class="md:hidden flex items-center justify-between bg-[#0d1322]/95 border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-md mobile-ios-header shadow-sm">
+        <a href="/" class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+            </div>
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">UniHub</span>
+        </a>
+        <div class="flex items-center gap-2">
+            <button onclick="abrirModalCrearMateria()" class="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+            <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white focus:outline-none" title="Menú">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation (Desktop & Drawer) -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-[#0d1322] border-r border-slate-800/80 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:static md:h-screen sticky top-0">
+        <div>
+            <!-- Logo Section -->
+            <div class="flex items-center justify-between px-6 py-6 border-b border-slate-800/60">
+                <a href="/" class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                        <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">UniHub</span>
+                        <p class="text-[11px] text-slate-400 font-medium">Gestión Universitaria</p>
+                    </div>
+                </a>
+                <button onclick="document.getElementById('sidebar').classList.add('-translate-x-full')" class="md:hidden text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="px-4 py-6 space-y-1.5">
+                <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Menú Principal</p>
+
+                <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {% if active_tab == 'dashboard' %}bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="/materias" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {% if active_tab == 'materias' %}bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Materias</span>
+                </a>
+
+                <a href="/horarios" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {% if active_tab == 'horarios' %}bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+                    <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+                    <span>Horarios & Cursadas</span>
+                </a>
+
+                <a href="/evaluaciones" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {% if active_tab == 'evaluaciones' %}bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+                    <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                    <span>Evaluaciones & Exámenes</span>
+                </a>
+
+                <a href="/calculadora" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 {% if active_tab == 'calculadora' %}bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                    <span>Calculadora y Promedio</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Bottom Quick Actions & Info -->
+        <div class="p-4 border-t border-slate-800/60">
+            <button onclick="abrirModalCrearMateria()" class="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Nueva Materia</span>
+            </button>
+            <div class="px-3 py-2.5 bg-slate-900/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs text-slate-300 font-medium">Ciclo Lectivo Activo</span>
+                </div>
+                <span class="text-[11px] text-slate-500 font-mono">SQLite Local</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area (con padding inferior para el bottom bar en iOS) -->
+    <main class="flex-1 min-w-0 flex flex-col overflow-y-auto pb-28 md:pb-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- iOS Native Bottom Tab Bar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d1322]/95 border-t border-slate-800/80 backdrop-blur-lg mobile-ios-bottom-bar flex items-center justify-around py-2 shadow-2xl">
+        <a href="/" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all {% if active_tab == 'dashboard' %}text-indigo-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <span class="text-[10px]">Inicio</span>
+        </a>
+        <a href="/materias" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all {% if active_tab == 'materias' %}text-indigo-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+            <span class="text-[10px]">Materias</span>
+        </a>
+        <a href="/horarios" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all {% if active_tab == 'horarios' %}text-indigo-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+            <span class="text-[10px]">Horarios</span>
+        </a>
+        <a href="/evaluaciones" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all {% if active_tab == 'evaluaciones' %}text-indigo-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+            <span class="text-[10px]">Exámenes</span>
+        </a>
+        <a href="/calculadora" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all {% if active_tab == 'calculadora' %}text-indigo-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i data-lucide="calculator" class="w-5 h-5"></i>
+            <span class="text-[10px]">Promedio</span>
+        </a>
+    </nav>
+
+    <!-- ==========================================
+         MODALES GLOBALES (MATERIA, HORARIO, EVALUACION)
+         ========================================== -->
+
+    <!-- Modal Materia -->
+    <div id="modal-materia" class="modal-root fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm modal-backdrop">
+        <div class="relative w-full max-w-lg bg-[#0e1526] border border-slate-800 rounded-2xl shadow-2xl p-6 overflow-hidden">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="book-plus" class="w-5 h-5"></i>
+                    </div>
+                    <h3 id="materia-modal-title" class="text-lg font-bold text-white">Nueva Materia</h3>
+                </div>
+                <button type="button" onclick="closeModal('modal-materia')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-materia" onsubmit="guardarMateria(event)" class="mt-4 space-y-4">
+                <input type="hidden" id="materia-id">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nombre de la Materia *</label>
+                    <input type="text" id="materia-nombre" required placeholder="Ej: Algoritmos y Estructuras de Datos" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Profesor / Cátedra</label>
+                        <input type="text" id="materia-profesor" placeholder="Ej: Dr. Pérez / Ing. Gómez" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Código de Materia</label>
+                        <input type="text" id="materia-codigo" placeholder="Ej: CS-102" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Año Carrera</label>
+                        <input type="number" id="materia-anio" min="1" max="6" value="1" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cuatrimestre</label>
+                        <select id="materia-cuatrimestre" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                            <option value="1">1° Cuatrimestre</option>
+                            <option value="2">2° Cuatrimestre</option>
+                            <option value="0">Anual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Estado</label>
+                        <select id="materia-estado" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                            <option value="CURSANDO">Cursando</option>
+                            <option value="REGULAR">Regular</option>
+                            <option value="APROBADA">Aprobada</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
+                    <div class="sm:col-span-1">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Color Etiqueta</label>
+                        <input type="color" id="materia-color" value="#3b82f6" class="w-full h-10 p-1 rounded-xl bg-slate-900 border border-slate-700/80 cursor-pointer">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Enlace Drive / Campus Virtual</label>
+                        <input type="url" id="materia-drive" placeholder="https://drive.google.com/..." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-materia')" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium">Cancelar</button>
+                    <button type="submit" id="btn-submit-materia" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-600/30">Guardar Materia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Horario -->
+    <div id="modal-horario" class="modal-root fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm modal-backdrop">
+        <div class="relative w-full max-w-md bg-[#0e1526] border border-slate-800 rounded-2xl shadow-2xl p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Agregar Horario de Cursada</h3>
+                </div>
+                <button type="button" onclick="closeModal('modal-horario')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-horario" onsubmit="guardarHorario(event)" class="mt-4 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Materia *</label>
+                    <select id="horario-materia-id" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        {% for mat in materias %}
+                        <option value="{{ mat.id }}">{{ mat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Día de la Semana *</label>
+                    <select id="horario-dia" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        <option value="LUNES">Lunes</option>
+                        <option value="MARTES">Martes</option>
+                        <option value="MIÉRCOLES">Miércoles</option>
+                        <option value="JUEVES">Jueves</option>
+                        <option value="VIERNES">Viernes</option>
+                        <option value="SÁBADO">Sábado</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Hora Inicio *</label>
+                        <input type="time" id="horario-inicio" required value="08:00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Hora Fin *</label>
+                        <input type="time" id="horario-fin" required value="10:00" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Aula / Ubicación / Enlace Virtual</label>
+                    <input type="text" id="horario-aula" placeholder="Ej: Aula 204 o Enlace Zoom/Meet" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-horario')" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium">Cancelar</button>
+                    <button type="submit" id="btn-submit-horario" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-emerald-600/30">Agregar Horario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Evaluación -->
+    <div id="modal-evaluacion" class="modal-root fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm modal-backdrop">
+        <div class="relative w-full max-w-md bg-[#0e1526] border border-slate-800 rounded-2xl shadow-2xl p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                        <i data-lucide="calendar-plus" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Programar Evaluación</h3>
+                </div>
+                <button type="button" onclick="closeModal('modal-evaluacion')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-evaluacion" onsubmit="guardarEvaluacion(event)" class="mt-4 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Materia *</label>
+                    <select id="eval-materia-id" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                        {% for mat in materias %}
+                        <option value="{{ mat.id }}">{{ mat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Título de la Evaluación *</label>
+                    <input type="text" id="eval-titulo" required placeholder="Ej: Primer Parcial Teórico / TP Integrador" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo *</label>
+                        <select id="eval-tipo" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                            <option value="PARCIAL">Parcial</option>
+                            <option value="TP">Trabajo Práctico</option>
+                            <option value="FINAL">Examen Final</option>
+                            <option value="RECUPERATORIO">Recuperatorio</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Fecha y Hora *</label>
+                        <input type="datetime-local" id="eval-fecha" required class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Ponderación (%)</label>
+                        <input type="number" id="eval-peso" min="0" max="100" step="1" placeholder="Ej: 30" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nota (si ya rindió)</label>
+                        <input type="number" id="eval-nota" min="1" max="10" step="0.1" placeholder="Ej: 8.5" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modal-evaluacion')" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium">Cancelar</button>
+                    <button type="submit" id="btn-submit-evaluacion" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-amber-600/30">Programar Examen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

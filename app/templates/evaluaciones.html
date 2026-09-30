@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluaciones y Exámenes - UniHub{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full animate-fade-in">
+
+    <!-- Header & Action Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">
+                <span>Calendario de Evaluaciones</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Evaluaciones & Exámenes</h1>
+            <p class="text-sm text-slate-400 mt-1">Control de parciales, entregas de trabajos prácticos, ponderación y registro inmediato de calificaciones.</p>
+        </div>
+        <div>
+            <button onclick="abrirModalCrearEvaluacion()" class="flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-amber-600/30 transition-all">
+                <i data-lucide="calendar-plus" class="w-4 h-4"></i>
+                <span>Programar Evaluación</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Buttons Bar -->
+    <div class="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-800">
+        <span class="text-xs font-semibold uppercase text-slate-500 mr-2">Filtrar:</span>
+        <button onclick="filtrarEvaluaciones('TODAS', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white">
+            Todas ({{ evaluaciones | length }})
+        </button>
+        <button onclick="filtrarEvaluaciones('PENDIENTES', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:text-white">
+            Pendientes de Nota
+        </button>
+        <button onclick="filtrarEvaluaciones('RENDIDAS', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:text-white">
+            Calificadas
+        </button>
+        <button onclick="filtrarEvaluaciones('PARCIAL', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:text-white">
+            Parciales
+        </button>
+        <button onclick="filtrarEvaluaciones('TP', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:text-white">
+            Trabajos Prácticos
+        </button>
+        <button onclick="filtrarEvaluaciones('FINAL', this)" class="filtro-eval-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-800/80 text-slate-400 hover:text-white">
+            Exámenes Finales
+        </button>
+    </div>
+
+    <!-- Lista de Evaluaciones -->
+    <div class="glass-panel rounded-2xl p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="px-4 py-3.5 rounded-l-xl">Evaluación & Materia</th>
+                        <th class="px-4 py-3.5">Tipo</th>
+                        <th class="px-4 py-3.5">Fecha y Hora</th>
+                        <th class="px-4 py-3.5">Ponderación</th>
+                        <th class="px-4 py-3.5">Calificación</th>
+                        <th class="px-4 py-3.5">Estado</th>
+                        <th class="px-4 py-3.5 text-right rounded-r-xl">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60" id="tabla-evaluaciones-body">
+                    {% if evaluaciones %}
+                        {% for ev in evaluaciones %}
+                        {% set tiene_nota = ev.nota is not none %}
+                        <tr class="item-evaluacion hover:bg-slate-900/50 transition-colors"
+                            data-tiene-nota="{{ 'true' if tiene_nota else 'false' }}"
+                            data-tipo="{{ ev.tipo.value }}">
+                            
+                            <!-- Título y Materia -->
+                            <td class="px-4 py-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-3 h-8 rounded-full flex-shrink-0" style="background-color: {{ ev.materia.color_hex if ev.materia else '#3b82f6' }};"></span>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">{{ ev.titulo }}</h4>
+                                        <p class="text-xs text-slate-400">{{ ev.materia.nombre if ev.materia else 'Materia' }}</p>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Tipo Badge -->
+                            <td class="px-4 py-4">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-semibold
+                                    {% if ev.tipo.value == 'PARCIAL' %}bg-indigo-500/20 text-indigo-400 border border-indigo-500/30
+                                    {% elif ev.tipo.value == 'TP' %}bg-purple-500/20 text-purple-400 border border-purple-500/30
+                                    {% elif ev.tipo.value == 'FINAL' %}bg-amber-500/20 text-amber-400 border border-amber-500/30
+                                    {% else %}bg-slate-800 text-slate-300{% endif %}">
+                                    {{ ev.tipo.value }}
+                                </span>
+                            </td>
+
+                            <!-- Fecha y Hora -->
+                            <td class="px-4 py-4 text-xs font-mono text-slate-300">
+                                <div>{{ ev.fecha.strftime('%d/%m/%Y') }}</div>
+                                <div class="text-slate-500 text-[11px]">{{ ev.fecha.strftime('%H:%M') }} hs</div>
+                            </td>
+
+                            <!-- Ponderación -->
+                            <td class="px-4 py-4 text-xs text-slate-300 font-mono">
+                                {% if ev.peso_porcentaje %}
+                                    <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-bold text-indigo-300">
+                                        {{ ev.peso_porcentaje }}%
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-600">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Calificación Inline con auto-guardado -->
+                            <td class="px-4 py-4">
+                                <div class="flex items-center gap-2">
+                                    <input type="number" 
+                                           min="1" 
+                                           max="10" 
+                                           step="0.1" 
+                                           value="{{ ev.nota if ev.nota is not none else '' }}" 
+                                           placeholder="S/N"
+                                           onchange="actualizarNotaEvaluacion({{ ev.id }}, this)"
+                                           class="w-16 px-2.5 py-1.5 text-center text-sm font-black rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-indigo-500">
+                                    <span class="text-xs text-slate-500">/ 10</span>
+                                </div>
+                            </td>
+
+                            <!-- Estado de Aprobación Dinámico -->
+                            <td class="px-4 py-4">
+                                {% if ev.nota is not none %}
+                                    {% if ev.nota >= 4.0 %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                            <i data-lucide="check" class="w-3 h-3"></i>
+                                            <span>Aprobado</span>
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                            <span>Desaprobado</span>
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-amber-400 border border-amber-500/30">
+                                        <i data-lucide="clock" class="w-3 h-3"></i>
+                                        <span>Pendiente</span>
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Acciones -->
+                            <td class="px-4 py-4 text-right">
+                                <button onclick="eliminarEvaluacion({{ ev.id }}, '{{ ev.titulo }}')" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors" title="Eliminar">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+                                <i data-lucide="calendar" class="w-10 h-10 mx-auto mb-2 text-slate-600"></i>
+                                <p class="text-slate-300 font-medium">No hay evaluaciones programadas</p>
+                                <p class="text-xs text-slate-500 mt-1">Comenzá haciendo clic en "Programar Evaluación".</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

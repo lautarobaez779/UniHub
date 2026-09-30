@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Calculadora de Rendimiento y Promedio - UniHub{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full animate-fade-in">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">
+                <span>Métricas de Rendimiento Académico</span>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Calculadora de Promedio Ponderado</h1>
+            <p class="text-sm text-slate-400 mt-1">Cálculo analítico del promedio oficial según ponderaciones y simulador interactivo para proyectar metas.</p>
+        </div>
+    </div>
+
+    <!-- Comparativa de Promedios Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+        <!-- Promedio Ponderado Oficial -->
+        <div class="glass-panel rounded-2xl p-6 border-indigo-500/30">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Promedio Ponderado Oficial</span>
+                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="award" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-4xl font-black text-indigo-400">{{ stats.promedio_ponderado }}</span>
+                <span class="text-xs text-slate-400">/ 10 pts</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Ponderado según el peso (%) de cada examen calificado.</p>
+        </div>
+
+        <!-- Promedio Aritmético Simple -->
+        <div class="glass-panel rounded-2xl p-6 border-slate-800">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Promedio Simple</span>
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-4xl font-black text-white">{{ stats.promedio_general }}</span>
+                <span class="text-xs text-slate-400">/ 10 pts</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Promedio directo de todas las calificaciones sin ponderación.</p>
+        </div>
+
+        <!-- Promedio Simulado en Tiempo Real -->
+        <div class="glass-panel rounded-2xl p-6 border-emerald-500/30 bg-emerald-950/20">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-300">Promedio Proyectado / Simulado</span>
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span id="calc-promedio-ponderado" class="text-4xl font-black text-emerald-400">{{ stats.promedio_ponderado }}</span>
+                <span class="text-xs text-slate-400">/ 10 pts</span>
+            </div>
+            <div class="mt-2 text-xs text-emerald-300/80 flex items-center gap-1.5">
+                <span>Simple simulado: <strong id="calc-promedio-simple" class="text-emerald-200">{{ stats.promedio_general }}</strong></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Simulador de Exámenes Existentes y Futuros -->
+    <div class="glass-panel rounded-2xl p-6 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div>
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+                    <span>Simulador de Calificaciones</span>
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Modificá notas o agregá exámenes hipotéticos para proyectar tu promedio final.</p>
+            </div>
+            <button onclick="agregarFilaHipotetica()" class="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-semibold transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>+ Agregar Examen Hipotético</span>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                    <tr>
+                        <th class="px-3 py-3 w-10 text-center rounded-l-xl">Inc.</th>
+                        <th class="px-4 py-3">Evaluación / Materia</th>
+                        <th class="px-4 py-3">Tipo</th>
+                        <th class="px-4 py-3">Ponderación (%)</th>
+                        <th class="px-4 py-3">Nota</th>
+                        <th class="px-4 py-3 text-right rounded-r-xl">Estado Proyectado</th>
+                    </tr>
+                </thead>
+                <tbody id="simulador-tbody" class="divide-y divide-slate-800/60">
+                    {% if evaluaciones %}
+                        {% for ev in evaluaciones %}
+                        <tr class="simulador-row hover:bg-slate-900/40 transition-colors">
+                            <td class="px-3 py-3 text-center">
+                                <input type="checkbox" checked onchange="simularPromedio()" class="sim-activo w-4 h-4 rounded bg-slate-800 border-slate-700">
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-white text-sm">{{ ev.titulo }}</div>
+                                <div class="text-xs text-slate-400">{{ ev.materia.nombre if ev.materia else 'Materia' }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs text-slate-300 px-2 py-0.5 rounded bg-slate-800">{{ ev.tipo.value }}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1">
+                                    <input type="number" min="0" max="100" step="1" 
+                                           value="{{ ev.peso_porcentaje or 0 }}" 
+                                           oninput="simularPromedio()" 
+                                           class="sim-peso w-16 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs text-white text-center font-mono focus:outline-none focus:border-indigo-500">
+                                    <span class="text-xs text-slate-400">%</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1">
+                                    <input type="number" min="1" max="10" step="0.1" 
+                                           value="{{ ev.nota if ev.nota is not none else '' }}" 
+                                           placeholder="Ej: 8"
+                                           oninput="simularPromedio()" 
+                                           class="sim-nota w-20 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm font-black text-white text-center focus:outline-none focus:border-indigo-500">
+                                    <span class="text-xs text-slate-500">/ 10</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="text-xs font-semibold text-slate-400">
+                                    {% if ev.nota is not none %}
+                                        {% if ev.nota >= 4.0 %}<span class="text-emerald-400">Aprobado</span>{% else %}<span class="text-rose-400">Desaprobado</span>{% endif %}
+                                    {% else %}
+                                        <span class="text-amber-400">Pendiente de rendir</span>
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr id="no-eval-sim">
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
+                                No hay evaluaciones registradas. Hacé clic en "+ Agregar Examen Hipotético" para probar promedios.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let hipoteticoCounter = 1;
+
+function agregarFilaHipotetica() {
+    const tbody = document.getElementById("simulador-tbody");
+    const emptyRow = document.getElementById("no-eval-sim");
+    if (emptyRow) emptyRow.remove();
+
+    const tr = document.createElement("tr");
+    tr.className = "simulador-row bg-indigo-950/20 border-l-2 border-indigo-500 hover:bg-indigo-950/30 transition-colors";
+    tr.innerHTML = `
+        <td class="px-3 py-3 text-center">
+            <input type="checkbox" checked onchange="simularPromedio()" class="sim-activo w-4 h-4 rounded bg-slate-800 border-slate-700">
+        </td>
+        <td class="px-4 py-3">
+            <input type="text" value="Examen Hipotético #${hipoteticoCounter}" class="bg-transparent border-b border-indigo-500/50 text-white font-bold text-sm focus:outline-none w-full">
+            <div class="text-[11px] text-indigo-400 mt-0.5">Simulación proyectada</div>
+        </td>
+        <td class="px-4 py-3">
+            <span class="text-xs text-indigo-300 px-2 py-0.5 rounded bg-indigo-900/50">PROYECTADO</span>
+        </td>
+        <td class="px-4 py-3">
+            <div class="flex items-center gap-1">
+                <input type="number" min="0" max="100" step="1" value="25" oninput="simularPromedio()" class="sim-peso w-16 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs text-white text-center font-mono focus:outline-none focus:border-indigo-500">
+                <span class="text-xs text-slate-400">%</span>
+            </div>
+        </td>
+        <td class="px-4 py-3">
+            <div class="flex items-center gap-1">
+                <input type="number" min="1" max="10" step="0.1" value="8" placeholder="Nota" oninput="simularPromedio()" class="sim-nota w-20 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-sm font-black text-white text-center focus:outline-none focus:border-indigo-500">
+                <span class="text-xs text-slate-500">/ 10</span>
+            </div>
+        </td>
+        <td class="px-4 py-3 text-right">
+            <button onclick="this.closest('tr').remove(); simularPromedio();" class="text-slate-500 hover:text-rose-400 text-xs p-1">
+                Eliminar
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+    hipoteticoCounter++;
+    simularPromedio();
+}
+
+// Inicializar cálculo interactivo al cargar la página
+document.addEventListener("DOMContentLoaded", () => {
+    simularPromedio();
+});
+</script>
+{% endblock %}

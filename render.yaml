@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: unihub-app
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: "pip install -r requirements.txt && python generate_icons.py && python seed_data.py"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: DATABASE_URL
+        value: sqlite:///./unihub.db
